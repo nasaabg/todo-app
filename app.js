@@ -8,7 +8,9 @@ var tasks = require('./routes/tasks');
 var http = require('http');
 var path = require('path');
 var mongoskin = require('mongoskin');
-var db = mongoskin.db('mongodb://localhost:27017/todo?auto_reconnect', {safe:true});
+
+// Initialize connection once
+var db = mongoskin.db('mongodb://localhost:27017/todo');
 var app = express();
 app.use(function(req, res, next) {
   req.db = {};
@@ -21,26 +23,24 @@ app.locals.appname = 'Express.js Todo App'
 app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'jade');
-app.use(express.favicon());
-app.use(express.logger('dev'));
-app.use(express.bodyParser());
-app.use(express.methodOverride());
-app.use(express.cookieParser());
-app.use(express.session({secret: '59B93087-78BC-4EB9-993A-A61FC844F6C9'}));
-app.use(express.csrf());
+// app.use(express.favicon());
+// app.use(express.logger('dev'));
+var bodyParser = require('body-parser');
+app.use(bodyParser.urlencoded({extended: false}));
+// app.use(express.methodOverride());
+var cookieParser = require('cookie-parser')
+app.use(cookieParser())
+// app.use(express.session({secret: '59B93087-78BC-4EB9-993A-A61FC844F6C9'}));
+// app.use(express.csrf());
 
 app.use(require('less-middleware')({ src: __dirname + '/public', compress: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(function(req, res, next) {
-  res.locals._csrf = req.session._csrf;
-  return next();
-})
-app.use(app.router);
 
-// development only
+var errorhandler = require('errorhandler')
 if ('development' == app.get('env')) {
-  app.use(express.errorHandler());
+  app.use(errorhandler());
 }
+
 app.param('task_id', function(req, res, next, taskId) {
   req.db.tasks.findById(taskId, function(error, task){
     if (error) return next(error);
